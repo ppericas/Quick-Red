@@ -14,9 +14,7 @@ for them to enter their name and a submit button to save it. Otherwise, the mess
 '''
 # ----------------------------------------------------------------------------------------------------------------------
 # imports
-import pygame
-import os
-import random
+import pygame, os, random, json
 
 pygame.init()
 
@@ -31,6 +29,7 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (204, 0, 0)
+GREY = (89, 89, 89)
 
 # sizes
 SQUARE_SIZE = 80
@@ -47,14 +46,10 @@ PLAY_MENU_IMAGE = pygame.image.load(
     os.path.join('assets', 'play_menu.png'))
 PLAY_MENU = pygame.transform.scale(PLAY_MENU_IMAGE, (WIDTH, HEIGHT))
 
-END_MENU_IMAGE = pygame.image.load(
-    os.path.join('assets', 'end_menu.png'))
-PLAY_MENU = pygame.transform.scale(PLAY_MENU_IMAGE, (WIDTH, HEIGHT))
-
 # text
-font_tittle = pygame.font.Font(None, 42)
-font_int = pygame.font.Font(None, 36)
-font_small = pygame.font.Font(None, 36)
+FONT_TITTLE = pygame.font.Font(None, 42)
+FONT_INT = pygame.font.Font(None, 72)
+FONT_SMALL = pygame.font.Font(None, 36)
 
 # others
 FPS = 60
@@ -153,56 +148,59 @@ squares_storage = {
 def get_random_seconds():
     return random.randint(400, 800)
 
-'''
-TODO make dificulty harder by increasing the number of squares and time between
-'''
+def save_user_data(name, time_taken):
+    top_scores = []
+    with open('top_scores.json', 'r') as file:
+        top_scores = json.load(file)
 
-def render_text():
-    text_score = font_tittle.render("SCORE", True, BLACK)
-    text_score_width = text_score.get_width()
-    WIN.blit(text_score, (500 + text_score_width / 2, 15))
+    top_scores.append({'name': name, 'time_taken': time_taken})
+    top_scores.sort(key=lambda x: x['time_taken']) # sort by time_taken
 
-    text_score_int = font_int.render("1", True, BLACK)
-    text_score_int_width = text_score_int.get_width()
-    WIN.blit(text_score_int, (500 + text_score_int_width / 2, 0))
+    with open('top_scores.json', 'w') as file:
+        json.dump(top_scores[:5], file) # save only the 5 names first from top_scores
 
-    text_time = font_tittle.render("Tiempo restante", True, BLACK)
-    text_time_width = text_time.get_width()
-    WIN.blit(text_time, (500 + text_time_width / 2, 0))
+def render_text(score, seconds_timer, top_scores, game_over=False):
+    x_pos_top5 = 510
+    show_name_input = True
 
-    text_time_seconds = font_int.render("1" + "s", True, BLACK)
-    text_time_seconds_width = text_time_seconds.get_width()
-    WIN.blit(text_time_seconds, (500 + text_time_seconds_width / 2, 0))
+    text_score = FONT_TITTLE.render("SCORE", True, BLACK)
+    WIN.blit(text_score, (545, 25))
 
-    text_top = font_tittle.render("Hall of Fame", True, BLACK)
-    text_top_width = text_top.get_width()
-    WIN.blit(text_top, (500 + text_top_width / 2, 0))
+    text_score_int = FONT_INT.render(str(score[0]), True, BLACK)
+    WIN.blit(text_score_int, (570, 80))
 
-    text_top_1 = font_small.render("1. " + "A" + "1", True, BLACK)
-    text_top_1_width = text_top_1.get_width()
-    WIN.blit(text_top_1, (500 + text_top_1_width / 2, 0))
+    text_top = FONT_TITTLE.render("Hall of Fame", True, BLACK)
+    WIN.blit(text_top, (x_pos_top5, 250))
 
-    text_top_2 = font_small.render("2. " + "A" + "1", True, BLACK)
-    text_top_2_width = text_top_2.get_width()
-    WIN.blit(text_top_2, (500 + text_top_2_width / 2, 0))
+    for i in range(5):
+        if i < len(top_scores):
+            text_top_i = FONT_SMALL.render(f"{i+1}. {top_scores[i]['name']} {top_scores[i]['time_taken']}s", True, BLACK)
+            WIN.blit(text_top_i, (x_pos_top5, 330 + i * 30))
+        else:
+            text_top_i = FONT_SMALL.render(f"{i+1}. ---", True, BLACK)
+            WIN.blit(text_top_i, (x_pos_top5, 330 + i * 30))
 
-    text_top_3 = font_small.render("3. " + "A" + "1", True, BLACK)
-    text_top_3_width = text_top_3.get_width()
-    WIN.blit(text_top_3, (500 + text_top_3_width / 2, 0))
+    if not game_over:
+        text_time_seconds = FONT_INT.render(str(int(seconds_timer)) + "s", True, BLACK)
+        WIN.blit(text_time_seconds, (550, 200))
 
-    text_top_4 = font_small.render("4. " + "A" + "1", True, BLACK)
-    text_top_4_width = text_top_4.get_width()
-    WIN.blit(text_top_4, (500 + text_top_4_width / 2, 0))
+    else:
+        if show_name_input:
+            render_text(score, seconds_timer, top_scores, game_over=True)
+        text_game_over = FONT_TITTLE.render("GAME OVER", True, BLACK)
+        WIN.blit(text_game_over, (510, 170))
 
-    text_top_5 = font_small.render("5. " + "A" + "1", True, BLACK)
-    text_top_5_width = text_top_5.get_width()
-    WIN.blit(text_top_5, (500 + text_top_5_width / 2, 0))
+        text_final_score_int = FONT_INT.render(str(score[0]), True, BLACK)
+        WIN.blit(text_final_score_int, (590, 260))
 
-def draw_window(menu):
+        text_record = FONT_TITTLE.render("Congratulations! You made it to the Top 5!", True, BLACK)
+        WIN.blit(text_record, (360, 350))
+        
+
+def draw_window(score, seconds_timer, top_scores):
     WIN.fill(WHITE)
-    WIN.blit(menu, (0, 0))
-    render_text()
-    # loop to move throught the list and draw red squares
+    WIN.blit(PLAY_MENU, (0, 0))
+    render_text(score, seconds_timer, top_scores) # loop to move throught the list and draw red squares
     for square in squares_storage.values():
         if square['color'] is RED:
             pygame.draw.rect(WIN, RED, square['square'])
@@ -224,30 +222,90 @@ def generate_random_square():
     square = 'SQUARE_X' + str(random_square_x) + '_Y' + str(random_square_y)
     squares_storage[square]['color'] = RED
 
+def handle_name_input(score, seconds_timer, top_scores):
+    name_input = ""
+    input_rect = pygame.Rect(495, 280, 10, 32)
+    active = False
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if input_rect.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+            if event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_RETURN:
+                        return name_input
+                    elif event.key == pygame.K_BACKSPACE:
+                        name_input = name_input[:-1]
+                    else:
+                        name_input += event.unicode
+        WIN.fill(WHITE)
+        WIN.blit(PLAY_MENU, (0, 0))
+        render_text(score, seconds_timer, top_scores, game_over=False)
+        txt_surface = FONT_TITTLE.render(name_input, True, GREY)
+        width = max(200, txt_surface.get_width() + 10)
+        input_rect.w = width
+        WIN.blit(txt_surface, (input_rect.x+5, input_rect.y+5))
+        pygame.draw.rect(WIN, GREY, input_rect, 2)
+        pygame.display.flip()
+
+def handle_loss(seconds_timer, top_scores):
+    if top_scores:
+        last_top_score = top_scores[-1]['time_taken']
+        if seconds_timer > last_top_score:
+            return True
+    return False
+
 # ----------------------------------------------------------------------------------------------------------------------
 # main function
 def main():
-    menu = PLAY_MENU
     clock = pygame.time.Clock()
     run = True
     seconds = get_random_seconds()
     pygame.time.set_timer(pygame.USEREVENT, seconds)
+    start_time = pygame.time.get_ticks()
     score = [0]
+    game_over = False
+
+    top_scores = []
+    if os.path.exists('top_scores.json'):
+        with open('top_scores.json', 'r') as file:
+            top_scores = json.load(file)
 
     while run:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
             elif event.type == pygame.USEREVENT:
-                generate_random_square()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if not game_over:
+                    generate_random_square()
+                else:
+                    if score[0] < 5:  # Si el jugador no está en los primeros 5, muestra el formulario de nombre
+                        show_name_input = True
+                    else:
+                        run = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not game_over:
                 handle_click(score)
-        # Update timer
-        timer = 0
-        timer += clock.get_rawtime()  # Get the time since the last tick
+
+        current_time = pygame.time.get_ticks()
+        seconds_timer = (current_time - start_time) / 1000
         clock.tick(FPS)
-        draw_window(menu)
+        draw_window(score, seconds_timer, top_scores)
+
+        if score[0] >= 20:
+            if handle_loss(seconds_timer, top_scores):
+                game_over = True
+            name_input = handle_name_input(score, seconds_timer, top_scores)
+            save_user_data(name_input, seconds_timer)
+
     pygame.quit()
+
 
 if __name__ == '__main__':
     main()
